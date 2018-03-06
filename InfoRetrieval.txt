@@ -1,0 +1,17 @@
+<span class=" pdp-price pdp-price_type_normal pdp-price_color_orange pdp-price_size_xl">SGD18.90</span>
+<span class=" pdp-price pdp-price_type_deleted pdp-price_color_lightgray pdp-price_size_xs">SGD49.00</span>
+<h1 class="pdp-product-title">JBL C100SI In-Ear Headphones with Mic (Black)</h1>
+<span data-spm-anchor-id="a2o42.pdp.0.i1.1c48935eoBEki8">In-Ear Headphones</span>
+<span data-spm-anchor-id="a2o42.pdp.0.i2.1c48935eoBEki8">Headphones &amp; Headsets</span>
+<span data-spm-anchor-id="a2o42.pdp.0.i0.1c48935enwBpR7">Audio</span>
+<span data-spm-anchor-id="a2o42.pdp.0.i1.1c48935enwBpR7">TV, Audio / Video, Gaming &amp; Wearables</span>
+<a class="pdp-link pdp-link_size_s pdp-link_theme_blue pdp-product-brand__brand-link" target="_self" href="https://www.lazada.sg/jbl/?spm=a2o42.pdp.0.0.1c48935enwBpR7" data-spm-anchor-id="a2o42.pdp.0.0">JBL</a>
+//*[@id="module_product_brand_1"]/div/a[1] - brand
+//*[@id="module_product_title_1"]/h1 - item name
+//*[@id="J_breadcrumb"]/li[4]/span/a/span - specific category
+//*[@id="J_breadcrumb"]/li[1]/span/a/span - general category
+//*[@id="module_product_price_1"]/div/span - discounted
+//*[@id="module_product_price_1"]/div/div/span[1] - original
+//*[@id="module_product_review_star_1"]/div/div[1] - rating
+#module_product_review_star_1 > div > div.container-star.pdp-review-summary__stars.pdp-stars_size_s
+//*[@id="module_product_review_star_1"]/div - no. of reviews and answered questions
