@@ -11,7 +11,7 @@ class LazadaSpider(CrawlSpider):
                   ]
 
     rules = (
-        Rule(LinkExtractor(allow=('lazada.sg/products/$', )), callback='parse_item', follow=True),
+        Rule(LinkExtractor(allow=('./products/.', )), callback='parse_item', follow=True),
         )
 
 ##    def start_requests(self):
