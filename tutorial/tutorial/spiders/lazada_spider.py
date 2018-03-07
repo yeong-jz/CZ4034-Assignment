@@ -3,14 +3,15 @@ from tutorial.items import LazadaItem
 from scrapy.spiders import CrawlSpider, Rule
 from scrapy.linkextractors import LinkExtractor
 
-class LazadaSpider(scrapy.Spider):
+class LazadaSpider(CrawlSpider):
     name = "LazadaItems"
     allowed_domains = ["lazada.sg"]
-    start_urls = ['https://www.lazada.sg/shop-audio/?spm=a2o42.home.cate_1.1.654346b5Noub1C']
+    start_urls = ['https://www.lazada.sg',
+                  'https://www.lazada.sg/shop-audio/',
+                  ]
 
     rules = (
-        Rule(LinkExtractor(allow=('products\.html', ), deny=('subsection\.php', ))),
-        Rule(LinkExtractor(allow=('\.html',)), callback='parse_item'),
+        Rule(LinkExtractor(allow=('lazada.sg/products/$', )), callback='parse_item', follow=True),
         )
 
 ##    def start_requests(self):
