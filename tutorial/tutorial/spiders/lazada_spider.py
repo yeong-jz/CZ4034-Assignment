@@ -6,12 +6,12 @@ from scrapy.linkextractors import LinkExtractor
 class LazadaSpider(CrawlSpider):
     name = "LazadaItems"
     allowed_domains = ["lazada.sg"]
-    start_urls = ['https://www.lazada.sg',
+    start_urls = [
                   'https://www.lazada.sg/shop-audio/',
                   ]
 
     rules = (
-        Rule(LinkExtractor(allow=('./products/.', )), callback='parse_item', follow=True),
+        Rule(LinkExtractor(allow=('https://www.lazada.sg/p', )), callback='parse_item', follow=True),
         )
 
 ##    def start_requests(self):
