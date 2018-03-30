@@ -8,24 +8,51 @@ class HSNSpider(scrapy.Spider):
     name = "HSNItems"
     start_urls = [
                   'https://www.hsn.com/shop/computers/ec0027?view=all',
+                  'https://www.hsn.com/shop/audio/ec0202?view=all',
+                  'https://www.hsn.com/shop/cameras-photo-and-video/ec0405?view=all',
+                  'https://www.hsn.com/shop/car-electronics/ec0427?view=all',
+                  'https://www.hsn.com/shop/headphones/ec0442?view=all',
+                  'https://www.hsn.com/shop/home-office/ec0573?view=all',
+                  'https://www.hsn.com/shop/portable-chargers-and-batteries/ec0484?view=all',
+                  'https://www.hsn.com/shop/printers/ec0454?view=all',
+                  'https://www.hsn.com/shop/shredders/ec0455?view=all',
+                  'https://www.hsn.com/shop/smart-home/ec0447?view=all',
+                  'https://www.hsn.com/shop/software/ec0304?view=all',
+                  'https://www.hsn.com/shop/tablets/ec0476?view=all',
+                  'https://www.hsn.com/shop/video-games-and-systems/ec0220?view=all',
+                  'https://www.hsn.com/shop/tvs-and-home-theater/ec0073?view=all',
+                  'https://www.hsn.com/shop/wearable-tech/ec0544?view=all',
+                  'https://www.hsn.com/shop/televisions/ec0137?view=all',
+                  'https://www.hsn.com/shop/cell-phones/ec0373?view=all',
+                  'https://www.hsn.com/shop/womens-clothing/fa0153?view=all',
+                  'https://www.hsn.com/shop/shoes/fa0045?view=all',
+                  'https://www.hsn.com/shop/socks/fa0142?view=all',
+                  'https://www.hsn.com/shop/wide-width-shoes/fa0045-7106?view=all',
+                  'https://www.hsn.com/shop/kids-shoes/fa0143?view=all',
+                  'https://www.hsn.com/shop/beauty/bs?view=all',
+                  'https://www.hsn.com/shop/jewelry/j?view=all',
+                  'https://www.hsn.com/shop/kitchen-and-food/qc?view=all',
+                  'https://www.hsn.com/shop/appliances/qc0010?view=all',
+                  'https://www.hsn.com/shop/cookware/qc0001?view=all',
+                  'https://www.hsn.com/shop/food-and-beverages/qc0037?view=all',
+                  'https://www.hsn.com/shop/health-and-fitness/hf?view=all',
+                  'https://www.hsn.com/shop/crafts-and-sewing/ct?view=all',
+                  'https://www.hsn.com/shop/travel/9365?view=all',
+                  'https://www.hsn.com/shop/fan-shop/sp?view=all',
+                  'https://www.hsn.com/shop/toys-and-games/ty?view=all',
+                  'https://www.hsn.com/shop/coins-and-collectibles/co?view=all',
                   ]
 
     def parse(self, response):
-##        result = response.css('script').extract()[2]
-##        result = result.replace('</script>',"")
-##        result = result.replace('<script>window.pageData=',"")
         links = response.xpath('//div[not(@*)]/a/@href').extract()
         for item in links:
-##            href = "https://www.hsn.com/products" + item
             print("Link: ", item)
-            yield response.follow(item, self.parse_review)
+            yield response.follow(item, self.parse_item)
         next_page = response.xpath('//*[@id="template-product-grid"]/div[1]/div[2]/div[2]/div[2]/div/nav/ul/li[2]/a/@href').extract_first(default='null')
         if next_page != 'null':
             next_page = response.urljoin(next_page)
             print("Next page: ", next_page)
             yield scrapy.Request(next_page, callback=self.parse, dont_filter = True)
-
-    
 
 
     def parse_item(self, response):
@@ -40,41 +67,16 @@ class HSNSpider(scrapy.Spider):
         count=0
         json_data = json.dumps(data)
         item = HSNItem()
-##        item['name'] = response.xpath('//*[@id="product-name"]/text()').extract_first(default='null'),
-##        item['price'] = response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[1]/div[1]/div/span[1]/text()').extract_first(default='null') + response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[1]/div[1]/div/span[2]/text()').extract_first(default='null'),
-##        item['savings'] = response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[2]/div[2]/span/text()').extract_first(default='null'),
-##        item['altPayment'] = response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[1]/div[2]/text()').extract_first().strip() + " * " + response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[3]/form/div[3]/p/label/a/text()').extract()[0].strip(),
-##        item['giftEligibility'] = response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[3]/form/p[1]/span/@data-tooltip').extract_first(default='null'),
-##        item['productDesc'] = json_data,
+        item['product_category'] = response.xpath('//*[@id="breadcrumb"]/ol/li[2]/a/span/text()').extract_first(default='null')
+        item['name'] = response.xpath('//*[@id="product-name"]/text()').extract_first(default='null'),
+        item['price'] = response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[1]/div[1]/div/span[1]/text()').extract_first(default='null') + response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[1]/div[1]/div/span[2]/text()').extract_first(default='null'),
+        item['savings'] = response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[2]/div[2]/span/text()').extract_first(default='null'),
+        item['altPayment'] = response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[1]/div[2]/text()').extract_first().strip() + " * " + response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[3]/form/div[3]/p/label/a/text()').extract()[0].strip(),
+        item['giftEligibility'] = response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[3]/form/p[1]/span/@data-tooltip').extract_first(default='null'),
+        item['productDesc'] = json_data,
         item['noOfReviews'] = response.xpath('//*[@id="product-detail-reviews"]/div[1]/div[1]/div[2]/span/text()').extract_first(default='null').strip(),
-##        item['rating'] = response.xpath('//*[@id="product-detail-reviews"]/div[1]/div[1]/div[2]/span/span/text()').extract_first(default='null').strip(),
-        ##item['review'] = response.xpath('//div[@class="copy"]/p/text()').extract(),
-##        item['review'] = ,
-##        item['rating'] = ,
-##        item['rating'] = ,
-####            'noOfRatings' : response.xpath('//*[@id="module_product_review_star_1"]/div/a[1]/text()').extract_first(default='null'),
-##            'colour' : response.xpath('//*[@id="productDetails"]/table/tr[2]/td[2]/text()').extract_first(default='null').strip(),
-##            'careLabel' : response.xpath('//*[@id="productDetails"]/table/tr[3]/td[2]/text()').extract_first(default='null').strip(),
-##            'material' : response.xpath('//*[@id="productDetails"]/table/tr[4]/td[2]/text()').extract_first(default='null').strip(),
-##            'xSmall' : response.xpath('//*[@id="sizeDetails"]/div[1]/span/text()[2]').extract_first(default='null'),
-##            'small' : response.xpath('///*[@id="sizeDetails"]/div[1]/span/text()[3]').extract_first(default='null'),
-##            'medium' : response.xpath('//*[@id="sizeDetails"]/div[1]/span/text()[4]').extract_first(default='null'),
-##            'large' : response.xpath('//*[@id="sizeDetails"]/div[1]/span/text()[5]').extract_first(default='null'),
-##            'xLarge' : response.xpath('//*[@id="sizeDetails"]/div[1]/span/text()[6]').extract_first(default='null'),
-##            'cashOnDelivery' : response.xpath('//*[@id="product-box"]/div/div[1]/section/div[1]/div[2]/div/ul/li[3]/span[2]/text()').extract_first(default='null'),
-##            '30d_return' : response.xpath('//*[@id="cms-freeReturn"]/span[2]/text()').extract_first(default='null'),
-##            'delivery_above_$40' : response.xpath('//*[@id="cms-usp__freeshipping"]/span[2]/text()').extract_first(default='null'),
-##            'deliver_date' : response.xpath('//*[@id="estimated_delivery_time"]/text()').extract_first(default='null'),
-
+        item['rating'] = response.xpath('//*[@id="product-detail-reviews"]/div[1]/div[1]/div[2]/span/span/text()').extract_first(default='null').strip(),
+        item['review'] = response.xpath('//div[@class="copy"]/p/text()').extract(),
         return item
-    
-    def parse_review(self, response):
-      item = HSNItem()
-      next_review_page = response.xpath('//*[@id="product-detail-reviews"]/div[3]/div/nav/ul/li[1]/@href').extract_first(default='null')
-      if next_review_page != 'null':
-          print(next_review_page)
-#          print(rq.get(next_review_page).text)
-          yield response.follow(next_review_page, callback=self.parse_item, dont_filter = True)
-      return item
-        
+
 
