@@ -7,26 +7,31 @@ import json
 from whoosh import index
 from whoosh import highlight
 from whoosh.fields import ID, TEXT, Schema
+from whoosh.analysis import CharsetFilter, StemmingAnalyzer, StopFilter
+from whoosh.support.charset import accent_map
 from whoosh.reading import TermNotFound
 from whoosh.qparser import QueryParser
 
+
+hsn_analyzer = StemmingAnalyzer() | CharsetFilter(accent_map) | StopFilter()
 SCHEMA = Schema(filename=ID(unique=True, stored=True),
-                content=TEXT(),
-                )  # TODO: define index
+                content=TEXT(analyzer=hsn_analyzer),
+                )
+
 
 def get_or_create_index(index_dir):
     if not os.path.exists(index_dir):
         os.mkdir(index_dir)
 
     if index.exists_in(index_dir):
-        return full_index(index_dir)
+        return index.open_dir(index_dir)
     else:
         return full_index(index_dir)
 
 
 def full_index(index_dir):
     idx = index.create_in(index_dir, SCHEMA)
-    writer = idx.writer()
+    writer = idx.writer(procs=4, limitmb=1024, multisegment=True)
 
     datas = []
 
