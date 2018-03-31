@@ -4,8 +4,10 @@ import sys
 import os
 import os.path
 import json
+import re
 from whoosh import index
 from whoosh import highlight
+from whoosh.spelling import Corrector, QueryCorrector
 from whoosh.fields import ID, TEXT, Schema
 from whoosh.analysis import CharsetFilter, StemmingAnalyzer, StopFilter
 from whoosh.support.charset import accent_map
@@ -15,7 +17,7 @@ from whoosh.qparser import QueryParser
 
 hsn_analyzer = StemmingAnalyzer() | CharsetFilter(accent_map) | StopFilter()
 SCHEMA = Schema(filename=ID(unique=True, stored=True),
-                content=TEXT(analyzer=hsn_analyzer),
+                content=TEXT(analyzer=hsn_analyzer, spelling=True),
                 )
 
 
@@ -74,6 +76,21 @@ def search(user_query, index_dir):
 
     # get searcher
     with idx.searcher() as searcher:
+        corrector = searcher.corrector("content")
+        corrected = searcher.correct_query(query, user_query)
+        if corrected.query != query:
+            print("Did you mean", corrected.string + "?")
+            ans = input("Enter Y/N: ")
+            try:
+                while not re.match(r"(?i)(YES|Y|N|NO)", ans):
+                    ans = input("Enter Y/N: ")
+                if re.match(r"(?i)(YES|Y)", ans):
+                    query = qp.parse(corrected.string)
+                else:
+                    query = qp.parse(input("Please enter your query again: "))
+            except IndexError:
+                print('you need to provide a query. assuming "chicken" query.')
+                search('chicken', 'index_dir')
         # do search
         try:
             results = searcher.search(query, limit=50)
@@ -95,7 +112,7 @@ def search(user_query, index_dir):
 
 if __name__ == '__main__':
     try:
-        query = sys.argv[1]
+        query = input("Enter a query: ")
     except IndexError:
         print('you need to provide a query. assuming "chicken" query.')
         search('chicken', 'index_dir')
