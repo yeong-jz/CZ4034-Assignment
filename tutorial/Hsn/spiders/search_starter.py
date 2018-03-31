@@ -8,7 +8,7 @@ import re
 from whoosh import index
 from whoosh import highlight
 from whoosh.spelling import Corrector, QueryCorrector
-from whoosh.fields import ID, TEXT, Schema
+from whoosh.fields import ID, TEXT, Schema, NUMERIC
 from whoosh.analysis import CharsetFilter, StemmingAnalyzer, StopFilter
 from whoosh.support.charset import accent_map
 from whoosh.reading import TermNotFound
@@ -17,15 +17,27 @@ from whoosh.qparser import QueryParser
 
 hsn_analyzer = StemmingAnalyzer() | CharsetFilter(accent_map) | StopFilter()
 SCHEMA = Schema(filename=ID(unique=True, stored=True),
-                content=TEXT(analyzer=hsn_analyzer, spelling=True),
+                content=TEXT(analyzer=hsn_analyzer, spelling=True, stored=True),
+                price=NUMERIC(sortable=True, stored=True),
+                rating=NUMERIC(sortable=True, stored=True),
+                noOfReviews=NUMERIC(sortable=True, stored=True),
+                savings=NUMERIC(sortable=True, stored=True),
+                review=TEXT(analyzer=hsn_analyzer, spelling=True),
                 )
-
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
 
 def get_or_create_index(index_dir):
     if not os.path.exists(index_dir):
         os.mkdir(index_dir)
 
     if index.exists_in(index_dir):
+        #uncomment if running for first time
+        #return full_index(index_dir)
         return index.open_dir(index_dir)
     else:
         return full_index(index_dir)
@@ -36,32 +48,45 @@ def full_index(index_dir):
     writer = idx.writer(procs=4, limitmb=1024, multisegment=True)
 
     datas = []
-
-    # TODO: get data
-##    for path, subdirs, files in os.walk(r'D:\Documents\CZ4034\whoosh-tutorial\pdfs'):
-##        for filename in files:
-##            f = os.path.join(path, filename)
-##            fileobj = codecs.open(f, "rb", "utf-8")
-##            content = fileobj.read()
-##            writer.add_document(filename=filename, content=content)
-##            fileobj.close()
-
-##    for path, subdirs, files in os.walk(r'D:\Documents\CZ4034\whoosh-tutorial\text'):
-##        for filename in files:
-##            f = os.path.join(path, filename)
-##            fileobj = codecs.open(f, "rb", "utf-8")
-##            content = fileobj.read()
-##            writer.add_document(filename=filename, content=content)
-##            fileobj.close()
-
     fileobj = open("HSN_products.json")
     fileobj1 = open("HSN_products_2.json")
     data = json.load(fileobj)
     data1 = json.load(fileobj1)
     for item in data:
-        writer.add_document(filename=item["name"], content=json.dumps(item))
+        # check if the string contains price data
+        if is_number(item["price"][1:].strip()):
+            # convert to float type for sorting
+            item_price = float(item["price"][1:])
+        else:
+            item_price = 100000
+        if is_number(item["noOfReviews"][0:2].strip()):
+            # convert to float type for sorting
+            item_num_reviews = float(item["noOfReviews"][0:2])
+        else:
+            item_num_reviews = 100000
+        if is_number(item["rating"][0:2].strip()):
+            # convert to float type for sorting
+            item_rating = float(item["rating"][0:2])
+        else:
+            item_rating = 100000
+        writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, review=item["review"])
     for item in data1:
-        writer.add_document(filename=item["name"], content=json.dumps(item))
+        if is_number(item["price"][1:].strip()):
+            # convert to float type for sorting
+            item_price = float(item["price"][1:])
+        else:
+            item_price = 100000
+        if is_number(item["noOfReviews"][0:2].strip()):
+            # convert to float type for sorting
+            item_num_reviews = float(item["noOfReviews"][0:2])
+        else:
+            item_num_reviews = 100000
+        if is_number(item["rating"][0:2].strip()):
+            # convert to float type for sorting
+            item_rating = float(item["rating"][0:2])
+        else:
+            item_rating = 100000
+        writer.add_document(filename=item["name"], content=json.dumps(item),price=item_price, rating=item_rating, noOfReviews=item_num_reviews, review=item["review"])
     writer.commit()
     return idx
 
@@ -76,7 +101,7 @@ def search(user_query, index_dir):
 
     # get searcher
     with idx.searcher() as searcher:
-        corrector = searcher.corrector("content")
+        # typo checker - checks if the user's query matches words in our content field by default, possible to add other dictionaries as well
         corrected = searcher.correct_query(query, user_query)
         if corrected.query != query:
             print("Did you mean", corrected.string + "?")
@@ -93,7 +118,7 @@ def search(user_query, index_dir):
                 search('chicken', 'index_dir')
         # do search
         try:
-            results = searcher.search(query, limit=50)
+            results = searcher.search(query, limit=50, sortedby="price")
         except TermNotFound:
             results = []
 
@@ -101,13 +126,11 @@ def search(user_query, index_dir):
         print("{} files matched:".format(len(results)))
         # results.fragmenter.maxchars = 100
         for hit in results:
-##            filecontents = ''
-##            with open(hit['text_filename']) as file_:
-##                filecontents = file_.read()
-##                highlight = (hit
-##                          .highlights("content", text=filecontents, top=2)
-##                          .replace("\n", " ").strip())
-            print("  * {}".format(hit['filename']))
+            if hit["price"] == 100000:
+                price = "No price stated."
+                print("  * {}".format(hit['filename']) +"\n" +"Price : {}".format(price))
+            else:
+                print("  * {}".format(hit['filename']) +"\n" +"Price : ${}".format(str(hit["price"])))
 
 
 if __name__ == '__main__':
