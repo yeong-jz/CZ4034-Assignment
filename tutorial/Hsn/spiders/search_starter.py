@@ -56,8 +56,6 @@ def full_index(index_dir):
     for item in data1:
         writer.add_document(filename=item["name"], content=json.dumps(item))
     writer.commit()
-    close(fileobj)
-    close(fileobj1)
     return idx
 
 
