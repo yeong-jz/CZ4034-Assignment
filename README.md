@@ -20,8 +20,10 @@ venv\Scripts\activate.bat
 
 6. In setup.py in senticnetapi change license=open('LICENSE').read(), to license=open('LICENSE',encoding="utf-8").read(),
 
-7. Install requirements:
+7. run python setup.py install
+
+8. Install requirements:
 
 pip install -r requirements.txt
 
-8. Run search_starter.py
+9. Run search_starter.py
