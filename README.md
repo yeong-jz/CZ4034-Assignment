@@ -16,6 +16,12 @@ Using Git Bash (reccommended):
 4. Using Command Prompt:
 venv\Scripts\activate.bat
 
-5. Install requirements:
+5. Install senticnet from this link : https://github.com/yurimalheiros/senticnetapi
+
+6. In setup.py in senticnetapi change license=open('LICENSE').read(), to license=open('LICENSE',encoding="utf-8").read(),
+
+7. Install requirements:
 
 pip install -r requirements.txt
+
+8. Run search_starter.py
