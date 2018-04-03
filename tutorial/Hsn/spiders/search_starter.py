@@ -5,6 +5,7 @@ import os
 import os.path
 import json
 import re
+from syn import synonyms
 from senticnet.senticnet import SenticNet
 from whoosh import index, sorting
 from whoosh import highlight
@@ -29,6 +30,7 @@ SCHEMA = Schema(filename=ID(unique=True, stored=True),
                 percentageSavings=NUMERIC(sortable=True,stored=True),
                 review=TEXT(analyzer=hsn_analyzer, spelling=True),
                 reviewPolarity=NUMERIC(sortable=True, stored=True),
+                countryOfOrigin=TEXT(sortable=True, stored=True),
                 )
 
 # function to check if a string contains a float
@@ -100,6 +102,17 @@ def full_index(index_dir):
         else:
             # give 0 if no savings were stated on website
             item_savings = 0
+        # try to get country of origin of product
+        try:
+            temp = json.loads(item["productDesc"])
+            country = temp["Country of Origin:"]
+            for i in country.split():
+                if i in synonyms["countries"]:
+                    break
+                else:
+                    country = "null"
+        except KeyError:
+            country = "null"
         # check if string contains reviews
         if len(item["review"]) == 0:
             # for no reviews, assign a neutral score
@@ -125,7 +138,7 @@ def full_index(index_dir):
             # divide the total score of the reviews added together by the number of reviews to get an average value
             averageIntensity = intensityValueReview/len(item["review"])
         if item_price != 100000:
-            writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, savings=item_savings, percentageSavings=(item_savings*100)/(item_savings+item_price), review=item["review"], reviewPolarity=averageIntensity)
+            writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, savings=item_savings, percentageSavings=(item_savings*100)/(item_savings+item_price), review=item["review"], reviewPolarity=averageIntensity, countryOfOrigin=country)
     for item in data1:
         if is_number(item["price"][1:].strip()):
             # convert to float type for sorting
@@ -152,6 +165,16 @@ def full_index(index_dir):
         else:
             # give 0 if no savings were stated on website
             item_savings = 0
+        try:
+            temp = json.loads(item["productDesc"])
+            country = temp["Country of Origin:"]
+            for i in country.split():
+                if i in synonyms["countries"]:
+                    break
+                else:
+                    country = "null"
+        except KeyError:
+            country = "null"
         # check if string contains reviews
         if len(item["review"]) == 0:
             # for no reviews, assign a neutral score
@@ -177,7 +200,7 @@ def full_index(index_dir):
             # divide the total score of the reviews added together by the number of reviews to get an average value
             averageIntensity = intensityValueReview/len(item["review"])
         if item_price != 100000:
-            writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, savings=item_savings, percentageSavings=(item_savings*100)/(item_savings+item_price), review=item["review"], reviewPolarity=averageIntensity)
+            writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, savings=item_savings, percentageSavings=(item_savings*100)/(item_savings+item_price), review=item["review"], reviewPolarity=averageIntensity, countryOfOrigin=country)
     writer.commit()
     return idx
 
@@ -208,10 +231,10 @@ def search(user_query, index_dir):
                 print('you need to provide a query. assuming "chicken" query.')
                 search('chicken', 'index_dir')
         # query user for sorting method
-        sortMethod = input("Search by :\n1. Price(ascending)\n2. Price(descending)\n3. Reviews\n4. Ratings\n5. Absolute savings\n6. Percentage Savings\n7. Reviews & Ratings\n8. Price, Reviews & Ratings\n9. Search by price range\nPlease enter your selection(1-9): ")
+        sortMethod = input("Search by :\n1. Price(ascending)\n2. Price(descending)\n3. Reviews\n4. Ratings\n5. Absolute savings\n6. Percentage Savings\n7. Reviews & Ratings\n8. Price, Reviews & Ratings\n9. Search by price range\n10.Country of Origin\nPlease enter your selection(1-10): ")
 
-        while not re.match(r"[1-9]", sortMethod):
-            sortMethod = input("Search by :\n1. Price(ascending)\n2. Price(descending)\n3. Reviews\n4. Ratings\n5. Absolute savings\n6. Percentage Savings\n7. Reviews & Ratings\n8. Price, Reviews & Ratings\n9. Search by price range\nPlease enter your selection(1-9): ")
+        while not re.match(r"[1-9]|10", sortMethod):
+            sortMethod = input("Search by :\n1. Price(ascending)\n2. Price(descending)\n3. Reviews\n4. Ratings\n5. Absolute savings\n6. Percentage Savings\n7. Reviews & Ratings\n8. Price, Reviews & Ratings\n9. Search by price range\n10.Country of Origin\nPlease enter your selection(1-10): ")
         # ascending order by price
         if sortMethod == "1":
             try:
@@ -275,6 +298,16 @@ def search(user_query, index_dir):
                 results = searcher.search(query, limit=None, sortedby="price")
             except TermNotFound:
                 results = []
+        elif sortMethod == "10":
+            try:
+                countryData = input("Enter the country of origin : ")
+                if re.match(r"(?i)(us)", countryData):
+                    countryData = "usa"
+                numResultsDisplayed = int(input("Enter the number of records to be shown : "))
+                scores = sorting.ScoreFacet()
+                results = searcher.search(qp.parse(user_query+" "+countryData), limit=None, sortedby=scores)
+            except TermNotFound:
+                results = []
         
 
         # print results
@@ -288,7 +321,13 @@ def search(user_query, index_dir):
                     print("Result {} : * {} *".format(count, hit['filename']) +"\n" +"Price : ${}".format(str(hit["price"]))+ "\n" + "Review score(higher is better) : {0:.2f}".format(hit["reviewPolarity"]) + "\n" + "Rating(higher is better) : {0:.2f}".format(hit["rating"]))
         elif sortMethod == "5" or sortMethod == "6":
             for hit in results:
-                print(" * {} *".format(hit['filename']) +"\n" +"Price : ${}".format(str(hit["price"]))+ "\nSavings : ${}".format(str(hit["savings"]))+"\n% Savings : {0:.1f}%".format((hit["percentageSavings"])))        
+                print(" * {} *".format(hit['filename']) +"\n" +"Price : ${}".format(str(hit["price"]))+ "\nSavings : ${}".format(str(hit["savings"]))+"\n% Savings : {0:.1f}%".format((hit["percentageSavings"])))
+        elif sortMethod == "10":
+            count = 0
+            for hit in results:
+                if count<numResultsDisplayed:
+                    count+=1
+                    print("Result {} : * {} *".format(count, hit['filename']) +"\nPrice : ${}".format(str(hit["price"]))+ "\nReview score(higher is better) : {0:.2f}".format(hit["reviewPolarity"]) + "\nRating(out of 5) : {0:.2f}".format(hit["rating"]) + "\nCountry of origin : {}".format(hit["countryOfOrigin"]))
         else:
             for hit in results:
                 print(" * {} *".format(hit['filename']) +"\n" +"Price : ${}".format(str(hit["price"]))+ "\n" + "Review score(higher is better) : {0:.2f}".format(hit["reviewPolarity"]) + "\n" + "Rating(higher is better) : {0:.2f}".format(hit["rating"]))
