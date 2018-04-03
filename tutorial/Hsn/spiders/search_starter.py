@@ -26,6 +26,7 @@ SCHEMA = Schema(filename=ID(unique=True, stored=True),
                 rating=NUMERIC(sortable=True, stored=True),
                 noOfReviews=NUMERIC(sortable=True, stored=True),
                 savings=NUMERIC(sortable=True, stored=True),
+                percentageSavings=NUMERIC(sortable=True,stored=True),
                 review=TEXT(analyzer=hsn_analyzer, spelling=True),
                 reviewPolarity=NUMERIC(sortable=True, stored=True),
                 )
@@ -92,6 +93,13 @@ def full_index(index_dir):
         else:
             # give 0 if no rating was stated on website
             item_rating = 0
+        # check if there is a value in savings
+        if is_number(item["savings"][1:].strip()):
+            # convert to float type for sorting
+            item_savings = float(item["savings"][1:])
+        else:
+            # give 0 if no savings were stated on website
+            item_savings = 0
         # check if string contains reviews
         if len(item["review"]) == 0:
             # for no reviews, assign a neutral score
@@ -117,7 +125,7 @@ def full_index(index_dir):
             # divide the total score of the reviews added together by the number of reviews to get an average value
             averageIntensity = intensityValueReview/len(item["review"])
         if item_price != 100000:
-            writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, review=item["review"], reviewPolarity=averageIntensity)
+            writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, savings=item_savings, percentageSavings=(item_savings*100)/(item_savings+item_price), review=item["review"], reviewPolarity=averageIntensity)
     for item in data1:
         if is_number(item["price"][1:].strip()):
             # convert to float type for sorting
@@ -137,6 +145,13 @@ def full_index(index_dir):
         else:
             # give 0 if no rating was stated on website
             item_rating = 0
+        # check if there is a value in savings
+        if is_number(item["savings"][1:].strip()):
+            # convert to float type for sorting
+            item_savings = float(item["savings"][1:])
+        else:
+            # give 0 if no savings were stated on website
+            item_savings = 0
         # check if string contains reviews
         if len(item["review"]) == 0:
             # for no reviews, assign a neutral score
@@ -162,7 +177,7 @@ def full_index(index_dir):
             # divide the total score of the reviews added together by the number of reviews to get an average value
             averageIntensity = intensityValueReview/len(item["review"])
         if item_price != 100000:
-            writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, review=item["review"], reviewPolarity=averageIntensity)
+            writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price, rating=item_rating, noOfReviews=item_num_reviews, savings=item_savings, percentageSavings=(item_savings*100)/(item_savings+item_price), review=item["review"], reviewPolarity=averageIntensity)
     writer.commit()
     return idx
 
@@ -193,10 +208,10 @@ def search(user_query, index_dir):
                 print('you need to provide a query. assuming "chicken" query.')
                 search('chicken', 'index_dir')
         # query user for sorting method
-        sortMethod = input("Search by :\n1. Price(ascending)\n2. Price(descending)\n3. Reviews\n4. Ratings\n5. Reviews & Ratings\n6. Price, Reviews & Ratings\n7. Search by price range\nPlease enter your selection(1-7): ")
+        sortMethod = input("Search by :\n1. Price(ascending)\n2. Price(descending)\n3. Reviews\n4. Ratings\n5. Absolute savings\n6. Percentage Savings\n7. Reviews & Ratings\n8. Price, Reviews & Ratings\n9. Search by price range\nPlease enter your selection(1-9): ")
 
-        while not re.match(r"[1-7]", sortMethod):
-            sortMethod = input("Search by :\n1. Price(ascending)\n2. Price(descending)\n3. Reviews\n4. Ratings\n5. Reviews & Ratings\n6. Price, Reviews & Ratings\n7. Search by price range\nPlease enter your selection(1-7): ")
+        while not re.match(r"[1-9]", sortMethod):
+            sortMethod = input("Search by :\n1. Price(ascending)\n2. Price(descending)\n3. Reviews\n4. Ratings\n5. Absolute savings\n6. Percentage Savings\n7. Reviews & Ratings\n8. Price, Reviews & Ratings\n9. Search by price range\nPlease enter your selection(1-9): ")
         # ascending order by price
         if sortMethod == "1":
             try:
@@ -221,8 +236,20 @@ def search(user_query, index_dir):
                 results = searcher.search(query, limit=20, sortedby="rating", reverse=True)
             except TermNotFound:
                 results = []
-        # sort by highest review polarity value and highest ratings
+        # sort by highest savings absolute value
         elif sortMethod == "5":
+            try:
+                results = searcher.search(query, limit=20, sortedby="savings", reverse=True)
+            except TermNotFound:
+                results = []
+        # sort by highest savings percentage
+        elif sortMethod == "6":
+            try:
+                results = searcher.search(query, limit=20, sortedby="percentageSavings", reverse=True)
+            except TermNotFound:
+                results = []
+        # sort by highest review polarity value and highest ratings
+        elif sortMethod == "7":
             try:
                 rP = sorting.FieldFacet("reviewPolarity", reverse=True)
                 r = sorting.FieldFacet("rating", reverse=True)
@@ -231,7 +258,7 @@ def search(user_query, index_dir):
             except TermNotFound:
                 results = []
         # sort by lowest price, highest review polarity value, highest ratings
-        elif sortMethod == "6":
+        elif sortMethod == "8":
             try:
                 rP = sorting.FieldFacet("reviewPolarity", reverse=True)
                 r = sorting.FieldFacet("rating", reverse=True)
@@ -240,7 +267,7 @@ def search(user_query, index_dir):
             except TermNotFound:
                 results = []
         # search by price range
-        elif sortMethod == "7":
+        elif sortMethod == "9":
             try:
                 priceRangeLow = int(input("Enter the minimum price : "))
                 priceRangeHigh = int(input("Enter the maximum price : "))
@@ -253,12 +280,15 @@ def search(user_query, index_dir):
         # print results
         print("{} files matched:".format(len(results)))
         # print individual records
-        if sortMethod == "7":
+        if sortMethod == "9":
             count = 0
             for hit in results:
                 if priceRangeLow <= hit["price"] <= priceRangeHigh and count<numResultsDisplayed:
                     count+=1
                     print("Result {} : * {} *".format(count, hit['filename']) +"\n" +"Price : ${}".format(str(hit["price"]))+ "\n" + "Review score(higher is better) : {0:.2f}".format(hit["reviewPolarity"]) + "\n" + "Rating(higher is better) : {0:.2f}".format(hit["rating"]))
+        elif sortMethod == "5" or sortMethod == "6":
+            for hit in results:
+                print(" * {} *".format(hit['filename']) +"\n" +"Price : ${}".format(str(hit["price"]))+ "\nSavings : ${}".format(str(hit["savings"]))+"\n% Savings : {0:.1f}%".format((hit["percentageSavings"])))        
         else:
             for hit in results:
                 print(" * {} *".format(hit['filename']) +"\n" +"Price : ${}".format(str(hit["price"]))+ "\n" + "Review score(higher is better) : {0:.2f}".format(hit["reviewPolarity"]) + "\n" + "Rating(higher is better) : {0:.2f}".format(hit["rating"]))
