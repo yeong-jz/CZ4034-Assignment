@@ -1,3 +1,9 @@
 Scrapy
 selenium
 whoosh
+numpy
+pandas
+tensorflow
+sklearn
+keras
+matplotlib
