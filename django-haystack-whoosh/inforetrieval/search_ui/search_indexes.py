@@ -1,16 +1,19 @@
 import datetime
 from haystack import indexes
-from search_ui.models import Note
+from search_ui.models import Product
 
 
-class NoteIndex(indexes.SearchIndex, indexes.Indexable):
+class ProductIndex(indexes.SearchIndex, indexes.Indexable):
     text = indexes.CharField(document=True, use_template=True)
-    author = indexes.CharField(model_attr='user')
-    pub_date = indexes.DateTimeField(model_attr='pub_date')
+
+    filename = indexes.CharField(model_attr='filename')
+    price = indexes.CharField(model_attr='price')
+    rating = indexes.CharField(model_attr='rating')
+    noOfReviews = indexes.CharField(model_attr='noOfReviews')
+    savings = indexes.CharField(model_attr='savings')
+    percentageSavings = indexes.CharField(model_attr='percentageSavings')
+    reviewPolarity = indexes.CharField(model_attr='reviewPolarity')
+    countryOfOrigin = indexes.CharField(model_attr='countryOfOrigin')
 
     def get_model(self):
-        return Note
-
-    def index_queryset(self, using=None):
-        """Used when the entire index for model is updated."""
-        return self.get_model().objects.filter(pub_date__lte=datetime.datetime.now())
+        return Product

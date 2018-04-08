@@ -1,3 +1,8 @@
-{{ object.title }}
-{{ object.user.get_full_name }}
-{{ object.body }}
+{{ object.filename }}
+{{ object.price }}
+{{ object.rating }}
+{{ object.noOfReviews }}
+{{ object.savings }}
+{{ object.percentageSavings }}
+{{ object.reviewPolarity }}
+{{ object.countryOfOrigin }}

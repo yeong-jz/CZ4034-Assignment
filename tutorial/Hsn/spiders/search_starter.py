@@ -15,6 +15,8 @@ from whoosh.analysis import CharsetFilter, StemmingAnalyzer, StopFilter
 from whoosh.support.charset import accent_map
 from whoosh.reading import TermNotFound
 from whoosh.qparser import QueryParser
+from django.db.models import signals
+from django.conf import settings
 
 # initialise sentic net
 sn = SenticNet()
@@ -45,9 +47,11 @@ def average(a, b):
     return (a + b) / 2.0
 
 # get or initialise index
-def get_or_create_index(index_dir):
+def update_index(sender=None, **kwargs):
     if not os.path.exists(index_dir):
-        os.mkdir(index_dir)
+        os.mkdir(settings.index_dir)
+        storage = store.FileStorage(settings.WHOOSH_INDEX)
+        ix = index.Index(storage, schema=WHOOSH_SCHEMA, create=True)
 
     user_input = input("Make a new index(Y/N)? :")
     while not re.match(r"(?i)(YES|Y|N|NO)", user_input):
@@ -60,8 +64,7 @@ def get_or_create_index(index_dir):
         else:
             print("No index found. Making a new one for you =).")
             return full_index(index_dir)
-        
-
+signals.post_syncdb.connect(update_index)
 # initialise index and populate with records
 def full_index(index_dir):
     idx = index.create_in(index_dir, SCHEMA)

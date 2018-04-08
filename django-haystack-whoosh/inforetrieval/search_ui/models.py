@@ -1,12 +1,16 @@
 from django.db import models
-from django.contrib.auth.models import User
 
 
-class Note(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE,)
-    pub_date = models.DateTimeField()
-    title = models.CharField(max_length=200)
-    body = models.TextField()
+class Product(models.Model):
+    filename = models.CharField(max_length=300)
+    price = models.CharField(max_length=50)
+    rating = models.CharField(max_length=50)
+    noOfReviews = models.CharField(max_length=50)
+    savings = models.CharField(max_length=50)
+    percentageSavings = models.CharField(max_length=50)
+    reviewPolarity = models.CharField(max_length=50)
+    countryOfOrigin = models.CharField(max_length=50)
+    #productDesc = models.TextField()
 
     def __unicode__(self):
-        return self.title
+        return self.filename
