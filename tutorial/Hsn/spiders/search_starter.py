@@ -269,9 +269,6 @@ def parseQuery(query):
         if i in synonyms["best"]:
             best = True
             query = query.replace(i, '')
-        if i in synonyms["price"]:
-            price = True
-            query = query.replace(i, '')
         if i in synonyms["rating"]:
             rating = True
             query = query.replace(i, '')
