@@ -7,3 +7,5 @@ tensorflow
 sklearn
 keras
 matplotlib
+ipython
+seaborn

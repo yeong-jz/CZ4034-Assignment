@@ -5,6 +5,7 @@ import os
 import os.path
 import json
 import re
+import sqlite3
 import itertools as it
 from syn import synonyms
 from senticnet.senticnet import SenticNet
@@ -17,13 +18,34 @@ from whoosh.support.charset import accent_map
 from whoosh.reading import TermNotFound
 from whoosh.qparser import QueryParser
 
+
+db = sqlite3.connect("test1.sqlite3")
+c = db.cursor()
+c.execute("DROP TABLE IF EXISTS polls_product")
+c.execute(''' CREATE TABLE polls_product
+         (ID numeric primary key,
+          filename text,
+          productCat text,
+          content text,
+          imageURL text,
+          price numeric,
+          rating numeric,
+          noOfReviews numeric,
+          savings numeric,
+          percentageSavings numeric,
+          productDesc text,
+          reviewPolarity numeric,
+          countryOfOrigin text,
+          overview text)''')
+c.close()
+
 # initialise sentic net
 sn = SenticNet()
 # does stemming, removes accents so you can match words like cafe, facade etc and removes stopwords
 hsn_analyzer = StemmingAnalyzer() | CharsetFilter(accent_map) | StopFilter()
 
-SCHEMA = Schema(filename=ID(unique=True, stored=True),
-                content=TEXT(analyzer=hsn_analyzer, spelling=True, stored=True),
+SCHEMA = Schema(filename=ID(unique=True, stored=True, analyzer=hsn_analyzer),
+                content=TEXT(analyzer=hsn_analyzer, spelling=True),
                 price=NUMERIC(sortable=True, stored=True),
                 rating=NUMERIC(sortable=True, stored=True),
                 noOfReviews=NUMERIC(sortable=True, stored=True),
@@ -33,6 +55,7 @@ SCHEMA = Schema(filename=ID(unique=True, stored=True),
                 productDesc=TEXT(stored=True),
                 reviewPolarity=NUMERIC(sortable=True, stored=True),
                 countryOfOrigin=TEXT(sortable=True, stored=True),
+                overview=TEXT(stored=True),
                 )
 
 # function to check if a string contains a float
@@ -67,18 +90,19 @@ def get_or_create_index(index_dir):
 def full_index(index_dir):
     idx = index.create_in(index_dir, SCHEMA)
     # for higher performance : processes = 4, RAM limit = 1024, multi segmented indexing = true
-    writer = idx.writer(procs=4, limitmb=1024, multisegment=True)
+    writer = idx.writer(procs = 4, limitmb = 1024, multisegment =True)
     
     #open and load product files for indexing
-    fileobj = open("HSN_products.json")
-    fileobj1 = open("HSN_products_2.json")
+##    fileobj = open("HSN_products.json")
+##    fileobj1 = open("HSN_products_2.json")
+    fileobj = open("HSN_products_3.json")
     data = json.load(fileobj)
-    data1 = json.load(fileobj1)
+##    data1 = json.load(fileobj1)
     count = records = count1 = records1 = 0
     
     # processing data for more sorting functions
-    for items in (data, data1):
-        for item in items:
+    for item in data:
+        #for item in items:
             count+=1
             # check if the string contains price data
             if is_number(item["price"][1:].strip()):
@@ -109,7 +133,10 @@ def full_index(index_dir):
             # try to get country of origin of product
             try:
                 temp = json.loads(item["productDesc"])
-                country = temp["Country of Origin:"]
+                try:
+                    country = temp["Country of Origin:"]
+                except TypeError:
+                    country = "null"
                 for i in country.split():
                     if i in synonyms["countries"]:
                         break
@@ -142,14 +169,38 @@ def full_index(index_dir):
                 # divide the total score of the reviews added together by the number of reviews to get an average value
                 averageIntensity = intensityValueReview/len(item["review"])
             if item_price != 100000:
+                filename=item["name"]
+                productCat=item["product_category"]
+                content=json.dumps(item)
+                imageURL=item["imageURL"]
+                price=item_price
+                rating=item_rating
+                noOfReviews=item_num_reviews
+                savings=item_savings
+                percentageSavings=(item_savings*100)/(item_savings+item_price)
+                productDesc=json.dumps(item["productDesc"])
+                review=str(item["review"])
+                reviewPolarity=averageIntensity
+                countryOfOrigin=country
+                overview=item["overview"]
+                # the following lines are to create an sqlite database file for haystack application
+##                c = db.cursor()
+##                product = (count, filename, productCat, content, imageURL, price, rating, noOfReviews, savings, percentageSavings, productDesc, reviewPolarity, countryOfOrigin, overview)
+##                c.execute('''INSERT INTO polls_product(ID, filename, productCat, content, imageURL, price, rating, noOfReviews, savings, percentageSavings, productDesc, reviewPolarity, countryOfOrigin, overview)
+##                            VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)''', product)
+##                
+##                c.close()
+                # uncomment below to do indexing
                 writer.add_document(filename=item["name"], content=json.dumps(item), price=item_price,\
                                     rating=item_rating, noOfReviews=item_num_reviews, savings=item_savings,\
                                     percentageSavings=(item_savings*100)/(item_savings+item_price), productDesc=item["productDesc"],\
-                                    review=item["review"], reviewPolarity=averageIntensity, countryOfOrigin=country)
+                                    review=item["review"], reviewPolarity=averageIntensity, countryOfOrigin=country, overview=item["overview"])
                 records+=1
     print("Total records: ", count)
     print("Total records added: ", records)
     writer.commit()
+##    db.commit()
+##    db.close()
     return idx
 
 
@@ -165,6 +216,7 @@ def search(index_dir):
             sortMethod = '1'    
         elif identifiers[1] == True:
             sortMethod = '8'
+            
             
         # parse the user_query
         qp = QueryParser("content", schema=idx.schema)
@@ -248,7 +300,7 @@ def search(index_dir):
                     print("Price : ${}".format(str(hit["price"])))
                     if identifiers[2] == True:
                         print("Savings : ${}".format(str(hit["savings"]))+"\n% Savings : {0:.1f}%".format((hit["percentageSavings"])))
-                    if identifiers[3] or identifiers[1] == True:
+                    if identifiers[3] or identifiers[1] == True or sortMethod=='8':
                         print("Rating : {0:.2f}/5.00".format(hit["rating"]))
                     print("Review score : {0:.2f}".format(hit["reviewPolarity"]))
                 
@@ -261,7 +313,7 @@ def search(index_dir):
             
 # check the user's query for some key features and strip them so that the search does not match those words
 def parseQuery(query):
-    cheap = best = savings = rating = False
+    cheap = best = savings = rating = fashion = False
     for i in query.split():
         if i in synonyms["cheap"]:
             cheap = True
@@ -275,6 +327,9 @@ def parseQuery(query):
         if i in synonyms["savings"]:
             savings = True
             query = query.replace(i, '')
+        if i in synonyms["fashion"]:
+            fashion = True
+            query = query + " " +"fashion"
     identifiers = [cheap, best, savings, rating]
     return identifiers, query
 

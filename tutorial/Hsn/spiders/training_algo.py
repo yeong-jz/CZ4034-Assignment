@@ -1,7 +1,5 @@
 import itertools
 import os
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -18,20 +16,18 @@ from keras import utils
 
 print("You have TensorFlow version", tf.__version__)
 
-train = pd.read_csv("test.csv")
-
+train = pd.read_csv("test1.csv")
 train.head()
-
 train_size = int(len(train) * .8)
 print ("Train size: %d" % train_size)
 
 train_posts = train['Item Name'][:train_size]
-train_tags = train['Category'][:train_size]
+train_tags = train['Categories'][:train_size]
 
 test_posts = train['Item Name'][train_size:]
-test_tags = train['Category'][train_size:]
+test_tags = train['Categories'][train_size:]
 
-vocab_size = 1000
+vocab_size = 2000
 tokenize = text.Tokenizer(num_words=vocab_size)
 tokenize.fit_on_texts(train_posts)
 x_train = tokenize.texts_to_matrix(train_posts)
@@ -112,10 +108,10 @@ def plot_confusion_matrix(cm, classes,
     cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
 
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title, fontsize=30)
+    plt.title(title, fontsize=26)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45, fontsize=22)
+    plt.xticks(tick_marks, classes, rotation=45, fontsize=15)
     plt.yticks(tick_marks, classes, fontsize=22)
 
     fmt = '.2f'

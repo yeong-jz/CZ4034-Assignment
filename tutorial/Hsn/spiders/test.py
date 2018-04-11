@@ -58,13 +58,22 @@ class HSNSpider(scrapy.Spider):
         data = {}
         for i in response.xpath('//tr[not(@*)]/td/text()').extract():
             if i.strip() != "":
-                 data[i.strip()] = response.xpath('//tr[not(@*)]/td/span/text()').extract()[count].strip()
-                 count+=1
+                try:
+                    data[i.strip()] = response.xpath('//tr[not(@*)]/td/span/text()').extract()[count].strip()
+                    count+=1
+                except IndexError:
+                    data="No Description Found"
         count=0
         json_data = json.dumps(data)
+        overview = response.xpath('//*[@id="overview"]/div/div/div/div/p/text()').extract()
+        overview=list((item.strip() if hasattr(item, 'strip') else item for item in overview))
+        overview=list(filter(None, overview))
+        if len(overview) == 0:
+            overview = ["No overview found."]
         yield {
             'product_category': response.xpath('//*[@id="breadcrumb"]/ol/li[2]/a/span/text()').extract_first(default='null'),
             'name': response.xpath('//*[@id="product-name"]/text()').extract_first(default='null'),
+            'overview': overview[0],
             'imageURL' : response.xpath('//*[@id="template-product-detail-product"]/div[1]/div[2]/div[1]/a/img/@src').extract_first(default="null"),
             'price': response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[1]/div[1]/div/span[1]/text()').extract_first(default='null') + response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[1]/div[1]/div/span[2]/text()').extract_first(default='null'),
             'savings': response.xpath('//*[@id="template-product-detail-product"]/div[2]/div[2]/div[2]/div[2]/span/text()').extract_first(default='null'),
